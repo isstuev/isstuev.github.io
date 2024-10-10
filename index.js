@@ -114,7 +114,6 @@
         INITIAL_JUMP_VELOCITY: 12,
         INVERT_FADE_DURATION: 12000,
         INVERT_DISTANCE: 700,
-        MAX_BLINK_COUNT: 3,
         MAX_CLOUDS: 6,
         MAX_OBSTACLE_LENGTH: 3,
         MAX_OBSTACLE_DUPLICATION: 2,
@@ -164,7 +163,6 @@
             CLOUD: { x: 86, y: 2 },
             HORIZON: { x: 2, y: 54 },
             MOON: { x: 484, y: 2 },
-            PTERODACTYL: { x: 134, y: 2 },
             RESTART: { x: 2, y: 2 },
             TEXT_SPRITE: { x: 655, y: 2 },
             TREX: { x: 848, y: 2 },
@@ -176,7 +174,6 @@
             CLOUD: { x: 166, y: 2 },
             HORIZON: { x: 2, y: 104 },
             MOON: { x: 954, y: 2 },
-            PTERODACTYL: { x: 260, y: 2 },
             RESTART: { x: 2, y: 2 },
             TEXT_SPRITE: { x: 1292, y: 2 },
             TREX: { x: 1678, y: 2 },
@@ -595,8 +592,7 @@
                 }
             }
 
-            if (this.playing || (!this.activated &&
-                this.tRex.blinkCount < Runner.config.MAX_BLINK_COUNT)) {
+            if (this.playing || !this.activated) {
                 this.tRex.update(deltaTime);
                 this.scheduleNextUpdate();
             }
@@ -698,9 +694,6 @@
                 if (this.tRex.jumping) {
                     // Speed drop, activated only when jump key is not pressed.
                     this.tRex.setSpeedDrop();
-                } else if (!this.tRex.jumping && !this.tRex.ducking) {
-                    // Duck.
-                    this.tRex.setDuck(true);
                 }
             }
         },
@@ -720,7 +713,6 @@
                 this.tRex.endJump();
             } else if (Runner.keycodes.DUCK[keyCode]) {
                 this.tRex.speedDrop = false;
-                this.tRex.setDuck(false);
             } else if (this.crashed) {
                 // Check that enough time has elapsed before allowing jump key to restart.
                 var deltaTime = getTimeStamp() - this.time;
@@ -1126,8 +1118,7 @@
         // Simple outer bounds check.
         if (boxCompare(tRexBox, obstacleBox)) {
             var collisionBoxes = obstacle.collisionBoxes;
-            var tRexCollisionBoxes = tRex.ducking ?
-                Trex.collisionBoxes.DUCKING : Trex.collisionBoxes.RUNNING;
+            var tRexCollisionBoxes = Trex.collisionBoxes.RUNNING;
 
             // Detailed axis aligned box check.
             for (var t = 0; t < tRexCollisionBoxes.length; t++) {
@@ -1457,26 +1448,6 @@
                 new CollisionBox(13, 10, 10, 38)
             ]
         },
-        {
-            type: 'PTERODACTYL',
-            width: 46,
-            height: 40,
-            yPos: [100, 75, 50], // Variable height.
-            yPosMobile: [100, 50], // Variable height mobile.
-            multipleSpeed: 999,
-            minSpeed: 8.5,
-            minGap: 150,
-            collisionBoxes: [
-                new CollisionBox(15, 15, 16, 5),
-                new CollisionBox(18, 21, 24, 6),
-                new CollisionBox(2, 14, 4, 3),
-                new CollisionBox(6, 10, 4, 7),
-                new CollisionBox(10, 8, 6, 9)
-            ],
-            numFrames: 2,
-            frameRate: 1000 / 6,
-            speedOffset: .8
-        }
     ];
 
 
@@ -1507,7 +1478,6 @@
         this.status = Trex.status.WAITING;
 
         this.jumping = false;
-        this.ducking = false;
         this.jumpVelocity = 0;
         this.reachedMinHeight = false;
         this.speedDrop = false;
@@ -1526,7 +1496,6 @@
         DROP_VELOCITY: -5,
         GRAVITY: 0.6,
         HEIGHT: 47,
-        HEIGHT_DUCK: 25,
         INIITAL_JUMP_VELOCITY: -10,
         INTRO_DURATION: 1500,
         MAX_JUMP_HEIGHT: 30,
@@ -1544,9 +1513,6 @@
      * @type {Array<CollisionBox>}
      */
     Trex.collisionBoxes = {
-        DUCKING: [
-            new CollisionBox(1, 18, 55, 25)
-        ],
         RUNNING: [
             new CollisionBox(22, 0, 17, 16),
             new CollisionBox(1, 18, 30, 9),
@@ -1564,7 +1530,6 @@
      */
     Trex.status = {
         CRASHED: 'CRASHED',
-        DUCKING: 'DUCKING',
         JUMPING: 'JUMPING',
         RUNNING: 'RUNNING',
         WAITING: 'WAITING'
@@ -1583,7 +1548,7 @@
      */
     Trex.animFrames = {
         WAITING: {
-            frames: [44, 0],
+            frames: [43.5, 0],
             msPerFrame: 1000 / 3
         },
         RUNNING: {
@@ -1598,10 +1563,6 @@
             frames: [88],
             msPerFrame: 1000 / 60
         },
-        DUCKING: {
-            frames: [264, 323],
-            msPerFrame: 1000 / 8
-        }
     };
 
 
@@ -1672,7 +1633,6 @@
             // Speed drop becomes duck if the down key is still being pressed.
             if (this.speedDrop && this.yPos == this.groundYPos) {
                 this.speedDrop = false;
-                this.setDuck(true);
             }
         },
 
@@ -1699,23 +1659,11 @@
             sourceX += this.spritePos.x;
             sourceY += this.spritePos.y;
 
-            // Ducking.
-            if (this.ducking && this.status != Trex.status.CRASHED) {
-                this.canvasCtx.drawImage(Runner.imageSprite, sourceX, sourceY,
-                    sourceWidth, sourceHeight,
-                    this.xPos, this.yPos,
-                    this.config.WIDTH_DUCK, this.config.HEIGHT);
-            } else {
-                // Crashed whilst ducking. Trex is standing up so needs adjustment.
-                if (this.ducking && this.status == Trex.status.CRASHED) {
-                    this.xPos++;
-                }
                 // Standing / running
                 this.canvasCtx.drawImage(Runner.imageSprite, sourceX, sourceY,
                     sourceWidth, sourceHeight,
                     this.xPos, this.yPos,
                     this.config.WIDTH, this.config.HEIGHT);
-            }
         },
 
         /**
