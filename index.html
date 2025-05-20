@@ -1,11 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-  </head>
-  <body>
-    <img src="https://uploads-ssl.webflow.com/644a5b7efad46e3cd70deafb/65afe534e09c4f299484f4ed_shib.png" alt="Shib image">
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <title>URL Fetch Test</title>
+</head>
+<body>
+  <h1>URL Fetch Test</h1>
+  
+  <div>
+    <input type="text" id="urlInput" placeholder="Enter URL to test" style="width: 300px;" />
+    <button onclick="testFetch()">Test Fetch</button>
+  </div>
+
+  <div id="result" style="margin-top: 20px;">
+    <p>Result will appear here...</p>
+  </div>
+
+  <script>
+    async function testFetch() {
+      const urlInput = document.getElementById('urlInput');
+      const resultDiv = document.getElementById('result');
+      const url = urlInput.value.trim();
+
+      if (!url) {
+        resultDiv.innerHTML = '<p style="color: red;">Please enter a URL</p>';
+        return;
+      }
+
+      try {
+        resultDiv.innerHTML = '<p>Testing fetch...</p>';
+        const response = await fetch(url);
+        const isOk = response.ok;
+        const status = response.status;
+        const statusText = response.statusText;
+
+        resultDiv.innerHTML = `
+          <p>Fetch ${isOk ? 'successful' : 'failed'}</p>
+          <p>Status: ${status} ${statusText}</p>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <p style="color: red;">Error: ${error.message}</p>
+        `;
+      }
+    }
+  </script>
+</body>
 </html>
