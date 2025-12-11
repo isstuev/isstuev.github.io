@@ -2,46 +2,121 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>URL Fetch Test</title>
+  <title>Blockscout SDK Chain Compatibility Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+    .input-group {
+      margin: 20px 0;
+    }
+    input {
+      padding: 8px;
+      font-size: 16px;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #dff0d8;
+      color: #3c763d;
+    }
+    .error {
+      background-color: #f2dede;
+      color: #a94442;
+    }
+    .warning {
+      background-color: #fcf8e3;
+      color: #8a6d3b;
+    }
+  </style>
 </head>
 <body>
-  <h1>URL Fetch Test</h1>
+  <h1>Blockscout SDK Chain Compatibility Checker</h1>
   
-  <div>
-    <input type="text" id="urlInput" placeholder="Enter URL to test" style="width: 300px;" />
-    <button onclick="testFetch()">Test Fetch</button>
+  <div class="input-group">
+    <input id="chainIdInput" placeholder="Enter Chain ID" style="width: 200px;" />
+    <button onclick="checkChainCompatibility()">Check Compatibility</button>
   </div>
 
-  <div id="result" style="margin-top: 20px;">
-    <p>Result will appear here...</p>
+  <div id="result">
+    <p>Enter a Chain ID to check Blockscout SDK compatibility...</p>
   </div>
 
   <script>
-    async function testFetch() {
-      const urlInput = document.getElementById('urlInput');
+    async function checkChainCompatibility() {
+      const chainIdInput = document.getElementById('chainIdInput');
       const resultDiv = document.getElementById('result');
-      const url = urlInput.value.trim();
+      const chainId = chainIdInput.value.trim();
 
-      if (!url) {
-        resultDiv.innerHTML = '<p style="color: red;">Please enter a URL</p>';
+      if (!chainId) {
+        resultDiv.className = 'error';
+        resultDiv.innerHTML = '<p>Please enter a Chain ID</p>';
         return;
       }
 
       try {
-        resultDiv.innerHTML = '<p>Testing fetch...</p>';
-        const response = await fetch(url);
-        const isOk = response.ok;
-        const status = response.status;
-        const statusText = response.statusText;
+        resultDiv.innerHTML = '<p>Checking chain compatibility...</p>';
+        
+        // First, check if the chain exists in Blockscout
+        const chainResponse = await fetch(`https://chains.blockscout.com/api/chains/${chainId}`);
+        
+        if (!chainResponse.ok) {
+          resultDiv.className = 'error';
+          resultDiv.innerHTML = '<p>No Blockscout explorer found for this chain</p>';
+          return;
+        }
 
-        resultDiv.innerHTML = `
-          <p>Fetch ${isOk ? 'successful' : 'failed'}</p>
-          <p>Status: ${status} ${statusText}</p>
-        `;
+        const chainData = await chainResponse.json();
+        
+        if (!chainData.explorers || chainData.explorers.length === 0) {
+          resultDiv.className = 'warning';
+          resultDiv.innerHTML = '<p>No Blockscout explorers are known for this chain</p>';
+          return;
+        }
+
+        const explorerUrl = chainData.explorers[0].url;
+        const apiUrl = explorerUrl.endsWith('/') 
+          ? `${explorerUrl}api/v2/transactions`
+          : `${explorerUrl}/api/v2/transactions`;
+
+        try {
+          const apiResponse = await fetch(apiUrl);
+          
+          if (apiResponse.ok) {
+            resultDiv.className = 'success';
+            resultDiv.innerHTML = '<p>✅ This chain is fully compatible with Blockscout SDK</p>';
+          } else if (apiResponse.status === 400) {
+            resultDiv.className = 'warning';
+            resultDiv.innerHTML = '<p>⚠️ Blockscout API v2 is not available for this chain. The SDK requires API v2 support.</p>';
+          } else {
+            resultDiv.className = 'error';
+            resultDiv.innerHTML = '<p>❌ Unexpected API response. Please try again later.</p>';
+          }
+        } catch (apiError) {
+          resultDiv.className = 'error';
+          resultDiv.innerHTML = `<p>❌ Error checking API: ${apiError.message}</p>`;
+        }
       } catch (error) {
-        resultDiv.innerHTML = `
-          <p style="color: red;">Error: ${error.message}</p>
-        `;
+        resultDiv.className = 'error';
+        resultDiv.innerHTML = `<p>❌ Error: ${error.message}</p>`;
       }
     }
   </script>
