@@ -2,125 +2,379 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5986463555755786"
-  crossorigin="anonymous"></script>
-  <title>Blockscout SDK Chain Compatibility Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tx Summary Tester</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 0 20px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+        "Segoe UI Emoji";
+      max-width: 980px;
+      margin: 28px auto;
+      padding: 0 16px;
+      line-height: 1.4;
+      color: #111827;
     }
     .input-group {
-      margin: 20px 0;
+      margin: 16px 0;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: #374151;
+      margin-bottom: 6px;
     }
     input {
-      padding: 8px;
-      font-size: 16px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: #fff;
     }
     button {
-      padding: 8px 16px;
-      font-size: 16px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
+      padding: 10px 14px;
+      font-size: 14px;
+      background-color: #111827;
+      color: #fff;
+      border: 1px solid #111827;
+      border-radius: 10px;
       cursor: pointer;
+      transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
     }
     button:hover {
-      background-color: #45a049;
+      background-color: #0b1220;
+      border-color: #0b1220;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 860px) {
+      .row {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .hint {
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px 12px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #111827;
     }
     #result {
       margin-top: 20px;
-      padding: 15px;
-      border-radius: 4px;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
     }
-    .success {
-      background-color: #dff0d8;
-      color: #3c763d;
+    details {
+      margin: 10px 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #fafafa;
     }
-    .error {
-      background-color: #f2dede;
-      color: #a94442;
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #111827;
     }
-    .warning {
-      background-color: #fcf8e3;
-      color: #8a6d3b;
+    pre {
+      margin: 10px 0 0;
+      padding: 12px;
+      border-radius: 10px;
+      background: #0b1220;
+      color: #e5e7eb;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.45;
     }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      color: #111827;
+    }
+    .pill.ok { border-color: #86efac; background: #dcfce7; color: #166534; }
+    .pill.bad { border-color: #fca5a5; background: #fee2e2; color: #991b1b; }
+    .pill.warn { border-color: #fde68a; background: #fef3c7; color: #92400e; }
   </style>
 </head>
 <body>
-  <h1>Blockscout SDK Chain Compatibility Checker</h1>
-  
-  <div class="input-group">
-    <input id="chainIdInput" placeholder="Enter Chain ID" style="width: 200px;" />
-    <button onclick="checkChainCompatibility()">Check Compatibility</button>
+  <h1 style="margin: 0 0 8px;">Tx Summary Tester</h1>
+  <div class="hint">
+    Fetches <span class="pill">GET</span> <code>/&lt;txHash&gt;/summary?just_request_body=true</code> from Blockscout and then
+    posts that JSON to the summary endpoint (<span class="pill">POST</span>) after adding <code>no_cache: true</code>.
   </div>
 
-  <div id="result">
-    <p>Enter a Chain ID to check Blockscout SDK compatibility...</p>
+  <div class="row" style="margin-top: 18px;">
+    <div class="input-group">
+      <label for="blockscoutUrlInput">BLOCKSCOUT_API_URL</label>
+      <input id="blockscoutUrlInput" placeholder="https://eth.blockscout.com/api/v2/transactions" />
+      <div class="hint" style="margin-top: 6px;">Example: <code>https://eth.blockscout.com/api/v2/transactions</code></div>
+    </div>
+
+    <div class="input-group">
+      <label for="summaryUrlInput">SUMMARY_API_URL</label>
+      <input id="summaryUrlInput" placeholder="https://tx-summary.k8s-dev.blockscout.com/transactions/summary" />
+      <div class="hint" style="margin-top: 6px;">Example: <code>https://tx-summary.k8s-dev.blockscout.com/transactions/summary</code></div>
+    </div>
+  </div>
+
+  <div class="input-group">
+    <label for="txHashInput">Transaction hash</label>
+    <input id="txHashInput" placeholder="0x…" />
+  </div>
+
+  <div class="actions">
+    <button id="runBtn" type="button">Fetch &amp; Summarize</button>
+    <button id="resetBtn" type="button" style="background:#fff;color:#111827;border-color:#d1d5db;">Reset defaults</button>
+    <span id="statusPill" class="pill">Idle</span>
+    <span class="hint" id="timingHint"></span>
+  </div>
+
+  <div class="status" id="statusBox" style="display:none;"></div>
+
+  <div id="result" aria-live="polite">
+    <details open>
+      <summary>Blockscout GET</summary>
+      <div class="hint" id="blockscoutRequestUrl"></div>
+      <pre id="blockscoutResponsePre">No data yet.</pre>
+    </details>
+
+    <details open>
+      <summary>Request body sent to Summary POST</summary>
+      <div class="hint" id="summaryRequestUrl"></div>
+      <pre id="summaryRequestPre">No data yet.</pre>
+    </details>
+
+    <details open>
+      <summary>Summary response</summary>
+      <pre id="summaryResponsePre">No data yet.</pre>
+    </details>
+
+    <details>
+      <summary>Logs</summary>
+      <pre id="logPre">Ready.</pre>
+    </details>
   </div>
 
   <script>
-    async function checkChainCompatibility() {
-      const chainIdInput = document.getElementById('chainIdInput');
-      const resultDiv = document.getElementById('result');
-      const chainId = chainIdInput.value.trim();
+    const DEFAULT_BLOCKSCOUT_API_URL = 'https://eth.blockscout.com/api/v2/transactions';
+    const DEFAULT_SUMMARY_API_URL = 'https://tx-summary.k8s-dev.blockscout.com/transactions/summary';
 
-      if (!chainId) {
-        resultDiv.className = 'error';
-        resultDiv.innerHTML = '<p>Please enter a Chain ID</p>';
-        return;
-      }
+    const LS_BLOCKSCOUT = 'tx_summary_tester:blockscout_api_url';
+    const LS_SUMMARY = 'tx_summary_tester:summary_api_url';
+    const LS_TXHASH = 'tx_summary_tester:tx_hash';
 
-      try {
-        resultDiv.innerHTML = '<p>Checking chain compatibility...</p>';
-        
-        // First, check if the chain exists in Blockscout
-        const chainResponse = await fetch(`https://chains.blockscout.com/api/chains/${chainId}`);
-        
-        if (!chainResponse.ok) {
-          resultDiv.className = 'error';
-          resultDiv.innerHTML = '<p>No Blockscout explorer found for this chain</p>';
-          return;
-        }
+    const els = {
+      blockscoutUrlInput: document.getElementById('blockscoutUrlInput'),
+      summaryUrlInput: document.getElementById('summaryUrlInput'),
+      txHashInput: document.getElementById('txHashInput'),
+      runBtn: document.getElementById('runBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      statusPill: document.getElementById('statusPill'),
+      timingHint: document.getElementById('timingHint'),
+      statusBox: document.getElementById('statusBox'),
+      blockscoutRequestUrl: document.getElementById('blockscoutRequestUrl'),
+      summaryRequestUrl: document.getElementById('summaryRequestUrl'),
+      blockscoutResponsePre: document.getElementById('blockscoutResponsePre'),
+      summaryRequestPre: document.getElementById('summaryRequestPre'),
+      summaryResponsePre: document.getElementById('summaryResponsePre'),
+      logPre: document.getElementById('logPre'),
+    };
 
-        const chainData = await chainResponse.json();
-        
-        if (!chainData.explorers || chainData.explorers.length === 0) {
-          resultDiv.className = 'warning';
-          resultDiv.innerHTML = '<p>No Blockscout explorers are known for this chain</p>';
-          return;
-        }
-
-        const explorerUrl = chainData.explorers[0].url;
-        const apiUrl = explorerUrl.endsWith('/') 
-          ? `${explorerUrl}api/v2/transactions`
-          : `${explorerUrl}/api/v2/transactions`;
-
-        try {
-          const apiResponse = await fetch(apiUrl);
-          
-          if (apiResponse.ok) {
-            resultDiv.className = 'success';
-            resultDiv.innerHTML = '<p>✅ This chain is fully compatible with Blockscout SDK</p>';
-          } else if (apiResponse.status === 400) {
-            resultDiv.className = 'warning';
-            resultDiv.innerHTML = '<p>⚠️ Blockscout API v2 is not available for this chain. The SDK requires API v2 support.</p>';
-          } else {
-            resultDiv.className = 'error';
-            resultDiv.innerHTML = '<p>❌ Unexpected API response. Please try again later.</p>';
-          }
-        } catch (apiError) {
-          resultDiv.className = 'error';
-          resultDiv.innerHTML = `<p>❌ Error checking API: ${apiError.message}</p>`;
-        }
-      } catch (error) {
-        resultDiv.className = 'error';
-        resultDiv.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+    function setStatus(kind, text, extra) {
+      els.statusPill.className = 'pill ' + (kind === 'ok' ? 'ok' : kind === 'bad' ? 'bad' : kind === 'warn' ? 'warn' : '');
+      els.statusPill.textContent = text;
+      if (extra) {
+        els.statusBox.style.display = 'block';
+        els.statusBox.textContent = extra;
+      } else {
+        els.statusBox.style.display = 'none';
+        els.statusBox.textContent = '';
       }
     }
+
+    function log(line) {
+      const ts = new Date().toISOString();
+      const current = els.logPre.textContent || '';
+      els.logPre.textContent = (current ? current + '\n' : '') + `[${ts}] ${line}`;
+    }
+
+    function prettyJson(value) {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch (_) {
+        return String(value);
+      }
+    }
+
+    function normalizeBaseUrl(url) {
+      return (url || '').trim().replace(/\/+$/, '');
+    }
+
+    async function readJsonOrText(response) {
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try {
+          return { kind: 'json', value: await response.json() };
+        } catch (e) {
+          return { kind: 'text', value: await response.text() };
+        }
+      }
+      return { kind: 'text', value: await response.text() };
+    }
+
+    function loadDefaults() {
+      els.blockscoutUrlInput.value = localStorage.getItem(LS_BLOCKSCOUT) || DEFAULT_BLOCKSCOUT_API_URL;
+      els.summaryUrlInput.value = localStorage.getItem(LS_SUMMARY) || DEFAULT_SUMMARY_API_URL;
+      els.txHashInput.value = localStorage.getItem(LS_TXHASH) || '';
+    }
+
+    function saveInputs() {
+      localStorage.setItem(LS_BLOCKSCOUT, els.blockscoutUrlInput.value.trim());
+      localStorage.setItem(LS_SUMMARY, els.summaryUrlInput.value.trim());
+      localStorage.setItem(LS_TXHASH, els.txHashInput.value.trim());
+    }
+
+    function resetDefaults() {
+      els.blockscoutUrlInput.value = DEFAULT_BLOCKSCOUT_API_URL;
+      els.summaryUrlInput.value = DEFAULT_SUMMARY_API_URL;
+      els.txHashInput.value = '';
+      saveInputs();
+      setStatus('', 'Idle');
+      els.timingHint.textContent = '';
+      els.blockscoutRequestUrl.textContent = '';
+      els.summaryRequestUrl.textContent = '';
+      els.blockscoutResponsePre.textContent = 'No data yet.';
+      els.summaryRequestPre.textContent = 'No data yet.';
+      els.summaryResponsePre.textContent = 'No data yet.';
+      els.logPre.textContent = 'Ready.';
+    }
+
+    async function fetchAndSummarize() {
+      saveInputs();
+
+      const txHash = els.txHashInput.value.trim();
+      const blockscoutBase = normalizeBaseUrl(els.blockscoutUrlInput.value);
+      const summaryUrl = els.summaryUrlInput.value.trim();
+
+      if (!blockscoutBase) {
+        setStatus('bad', 'Missing URL', 'Please provide BLOCKSCOUT_API_URL.');
+        return;
+      }
+      if (!summaryUrl) {
+        setStatus('bad', 'Missing URL', 'Please provide SUMMARY_API_URL.');
+        return;
+      }
+      if (!txHash) {
+        setStatus('bad', 'Missing tx hash', 'Please provide a transaction hash.');
+        return;
+      }
+      if (!/^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+        setStatus('warn', 'Tx hash looks odd', 'Expected a 0x-prefixed 32-byte hash (66 chars). I will still try.');
+      } else {
+        setStatus('', 'Ready');
+      }
+
+      els.runBtn.disabled = true;
+      els.resetBtn.disabled = true;
+      const started = performance.now();
+      els.timingHint.textContent = '';
+
+      try {
+        setStatus('', 'Fetching…');
+        log(`Fetching transaction data for ${txHash}…`);
+
+        const blockscoutUrl = `${blockscoutBase}/${txHash}/summary?just_request_body=true`;
+        els.blockscoutRequestUrl.textContent = blockscoutUrl;
+
+        const response = await fetch(blockscoutUrl, { method: 'GET' });
+        const parsed = await readJsonOrText(response);
+        els.blockscoutResponsePre.textContent =
+          `HTTP ${response.status}\n\n` + (parsed.kind === 'json' ? prettyJson(parsed.value) : String(parsed.value));
+
+        if (!response.ok) {
+          throw new Error(`Blockscout HTTP ${response.status}`);
+        }
+        if (parsed.kind !== 'json' || !parsed.value || typeof parsed.value !== 'object') {
+          throw new Error('Blockscout response is not JSON object (cannot POST to summary).');
+        }
+
+        // Mutate payload like your script
+        parsed.value.no_cache = true;
+
+        log('Sending to summary endpoint…');
+        setStatus('', 'Posting…');
+        els.summaryRequestUrl.textContent = summaryUrl;
+        els.summaryRequestPre.textContent = prettyJson(parsed.value);
+
+        const summaryResponse = await fetch(summaryUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parsed.value),
+        });
+
+        const summaryParsed = await readJsonOrText(summaryResponse);
+        els.summaryResponsePre.textContent =
+          `HTTP ${summaryResponse.status}\n\n` +
+          (summaryParsed.kind === 'json' ? prettyJson(summaryParsed.value) : String(summaryParsed.value));
+
+        if (!summaryResponse.ok) {
+          log(`Summary endpoint failed: HTTP ${summaryResponse.status}`);
+          setStatus('bad', 'Summary failed', `Summary HTTP ${summaryResponse.status} (see response below).`);
+          return;
+        }
+
+        log('Done.');
+        setStatus('ok', 'Success');
+      } catch (error) {
+        const msg = error && error.message ? error.message : String(error);
+        log(`Error: ${msg}`);
+        // This often happens due to CORS in browsers
+        setStatus('bad', 'Error', msg);
+      } finally {
+        const ms = Math.round(performance.now() - started);
+        els.timingHint.textContent = `Last run: ${ms}ms`;
+        els.runBtn.disabled = false;
+        els.resetBtn.disabled = false;
+      }
+    }
+
+    // Init
+    loadDefaults();
+    setStatus('', 'Idle');
+    els.runBtn.addEventListener('click', fetchAndSummarize);
+    els.resetBtn.addEventListener('click', resetDefaults);
+    els.blockscoutUrlInput.addEventListener('change', saveInputs);
+    els.summaryUrlInput.addEventListener('change', saveInputs);
+    els.txHashInput.addEventListener('change', saveInputs);
+    els.txHashInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') fetchAndSummarize();
+    });
   </script>
 </body>
 </html>
